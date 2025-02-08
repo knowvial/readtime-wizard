@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReadTime Wizard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .result-card {
+            display: none;
+            margin-top: 20px;
+        }
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <h1 class="mb-4">📚 ReadTime Wizard</h1>
+        
+        <div class="card">
+            <div class="card-body">
+                <form id="readtimeForm">
+                    <div class="mb-3">
+                        <label for="bookTitle" class="form-label">Book Title</label>
+                        <input type="text" class="form-control" id="bookTitle" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="pages" class="form-label">Number of Pages</label>
+                        <input type="number" class="form-control" id="pages" min="1" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="readingLevel" class="form-label">Reading Level</label>
+                        <select class="form-select" id="readingLevel" required>
+                            <option value="1">Beginner</option>
+                            <option value="2" selected>Intermediate</option>
+                            <option value="3">Advanced</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="genre" class="form-label">Genre</label>
+                        <select class="form-select" id="genre" required>
+                            <option value="fiction">Fiction</option>
+                            <option value="non-fiction">Non-Fiction</option>
+                            <option value="textbook">Textbook</option>
+                            <option value="technical">Technical</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="availableTime" class="form-label">Available Reading Time (minutes per day)</label>
+                        <input type="number" class="form-control" id="availableTime" min="1" max="1440" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="readingSpeed" class="form-label">Reading Speed</label>
+                        <select class="form-select" id="readingSpeed" required>
+                            <option value="1">Slow</option>
+                            <option value="2" selected>Medium</option>
+                            <option value="3">Fast</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Calculate Reading Time</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="loading text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <div class="card result-card">
+            <div class="card-body">
+                <h5 class="card-title">Reading Estimate Results</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Time Estimates</h6>
+                        <p><strong>Total Hours:</strong> <span id="totalHours"></span></p>
+                        <p><strong>Days to Complete:</strong> <span id="daysToComplete"></span></p>
+                        <p><strong>Confidence Score:</strong> <span id="confidence"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Reading Tips</h6>
+                        <ul id="readingTips"></ul>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h6>Reading Schedule</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" id="progressBar" style="width: 0%"></div>
+                    </div>
+                    <div id="schedule"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('readtimeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Show loading spinner
+            document.querySelector('.loading').style.display = 'block';
+            document.querySelector('.result-card').style.display = 'none';
+            
+            // Get form values
+            const data = {
+                book_title: document.getElementById('bookTitle').value,
+                pages: parseInt(document.getElementById('pages').value),
+                reading_level: parseInt(document.getElementById('readingLevel').value),
+                genre: document.getElementById('genre').value,
+                available_time: parseInt(document.getElementById('availableTime').value),
+                reading_speed: parseInt(document.getElementById('readingSpeed').value)
+            };
+
+            try {
+                // Replace this URL with your actual API endpoint
+                const response = await fetch('/estimate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    throw new Error('API request failed');
+                }
+
+                const result = await response.json();
+                
+                // Update the results
+                document.getElementById('totalHours').textContent = result.total_hours.toFixed(1);
+                document.getElementById('daysToComplete').textContent = result.days_to_complete;
+                document.getElementById('confidence').textContent = 
+                    (result.confidence * 100).toFixed(1) + '%';
+
+                // Update reading tips
+                const tipsList = document.getElementById('readingTips');
+                tipsList.innerHTML = '';
+                result.reading_tips.forEach(tip => {
+                    const li = document.createElement('li');
+                    li.textContent = tip;
+                    tipsList.appendChild(li);
+                });
+
+                // Update schedule
+                const scheduleDiv = document.getElementById('schedule');
+                scheduleDiv.innerHTML = '';
+                result.schedule.forEach(day => {
+                    scheduleDiv.innerHTML += `
+                        <div class="d-flex justify-content-between small">
+                            <span>Day ${day.day}</span>
+                            <span>${day.minutes} minutes</span>
+                            <span>${day.cumulative_progress}% complete</span>
+                        </div>
+                    `;
+                });
+
+                // Update progress bar
+                document.getElementById('progressBar').style.width = '0%';
+                
+                // Show results
+                document.querySelector('.result-card').style.display = 'block';
+                
+            } catch (error) {
+                alert('Error calculating reading time. Please try again.');
+                console.error('Error:', error);
+            } finally {
+                document.querySelector('.loading').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
