@@ -2,10 +2,15 @@
 ML Model hosted in docker - learning example
 
 ## Instructions:
-> git clone https://github.com/knowvial/readtime-wizard.git
-> cd readtime-wizard
-> docker build -t readtime-wizard .
-> docker run -d -p 80:80 readtime-wizard
+```sh
+git clone https://github.com/knowvial/readtime-wizard.git
+
+cd readtime-wizard
+
+docker build -t readtime-wizard .
+
+docker run -d -p 80:80 readtime-wizard
+```
 
 ## Sample data:
 ```
